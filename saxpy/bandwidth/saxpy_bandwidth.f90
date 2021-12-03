@@ -90,7 +90,7 @@ program testSaxpy
         bw = bw*3
         ! divide by time and correct to print GB/s
         bw = bw / time / 10**6
-        write(*,*) 'Kernel execution took: ', time, ' s'
+        write(*,*) 'Kernel execution took: ', time, ' ms'
         write(*,*) 'Effective bandwidth: ', bw, ' GB/s'
         write(*,*) 'Max error: ', maxval(abs(y-4.0))
 end program testSaxpy

@@ -94,9 +94,9 @@ program testSaxpy
         bw = bw / time / 10**6
 
         ! gflops calculation: saxpy is a multiply-add operation (2 flo per element)
-        glops = 2*N / time / 10**9
-        write(*,*) 'Kernel execution took: ', time, ' s'
+        gflops = 2*N / time / 10**6
+        write(*,*) 'Kernel execution took: ', time, ' ms'
         write(*,*) 'Effective bandwidth: ', bw, ' GB/s'
-        write(*,*) 'Effective GFLOPS: ' gflops
+        write(*,*) 'Effective GFLOPS: ', gflops
         write(*,*) 'Max error: ', maxval(abs(y-4.0))
 end program testSaxpy

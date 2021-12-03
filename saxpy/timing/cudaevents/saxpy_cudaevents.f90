@@ -76,11 +76,11 @@ program testSaxpy
         call saxpy<<<grid, tBlock>>>(x_d, y_d, a)
         istat = cudaEventRecord(stopEvent, 0)
         istat = cudaEventSynchronize(stopEvent) ! this blocks cpu execution until stopEvent is recorded
-        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent,stopEvent)        ! time is in ms
 
         ! transfer result back to host
         y = y_d
 
-        write(*,*) 'Kernel execution took: ', time, ' s'
+        write(*,*) 'Kernel execution took: ', time, ' ms'
         write(*,*) 'Max error: ', maxval(abs(y-4.0))
 end program testSaxpy
