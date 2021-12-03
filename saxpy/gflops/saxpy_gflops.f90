@@ -54,6 +54,8 @@ program testSaxpy
 
         ! This will hold the effective GPU mem bandwidth
         real :: bw
+        ! This will hold the effective GFLOPS
+        real :: gflops
         
         ! create cudaEvents
         istat = cudaEventCreate(startEvent)
@@ -90,7 +92,11 @@ program testSaxpy
         bw = bw*3
         ! divide by time and correct to print GB/s
         bw = bw / time / 10**6
+
+        ! gflops calculation: saxpy is a multiply-add operation (2 flo per element)
+        glops = 2*N / time / 10**9
         write(*,*) 'Kernel execution took: ', time, ' s'
         write(*,*) 'Effective bandwidth: ', bw, ' GB/s'
+        write(*,*) 'Effective GFLOPS: ' gflops
         write(*,*) 'Max error: ', maxval(abs(y-4.0))
 end program testSaxpy
