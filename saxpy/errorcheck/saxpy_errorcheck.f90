@@ -1,5 +1,5 @@
 !! This code is entirely based on the following NVIDIA blog:
-!! https://developer.nvidia.com/blog/easy-introduction-cuda-fortran/
+!! https://developer.nvidia.com/blog/how-query-device-properties-and-handle-errors-cuda-fortran/
 
 module mathOps
 contains
@@ -47,6 +47,9 @@ program testSaxpy
         real, device :: x_d(N), y_d(N)          ! device arrays
         type(dim3) :: grid, tBlock
 
+        ! these will hold errors
+        integer :: ierrSync, ierrAsync
+
         ! set the number of thread blocks to pass all N elements
         ! dim3 is a derived type for 3d structures (cuda grid)
         tBlock = dim3(256,1,1)
@@ -62,6 +65,15 @@ program testSaxpy
         ! r: number of thread blocks in the grid
         ! s: number of threads in a block
         call saxpy<<<grid, tBlock>>>(x_d, y_d, a)
+        ! check for errors
+        ierrSync = cudaGetLastError()
+        ierrAsync = cudaDeviceSynchronize()
+        if (ierrSync /= cudaSuccess) then
+                write(*,*) 'Sync kernel error: ', cudaGetErrorString(ierrSync)
+        endif
+        if (ierrAsync /= cudaSuccess) then
+                write(*,*) 'Async kernel error: ', cudaGetErrorString(ierrAsync)
+        endif 
         ! transfer result back to host
         y = y_d
         write(*,*) 'Max error: ', maxval(abs(y-4.0))
