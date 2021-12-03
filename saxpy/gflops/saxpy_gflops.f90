@@ -42,7 +42,7 @@ program testSaxpy
         use mathOps     ! contains saxpy kernel
         use cudafor     ! CUDA Fortran definitions
         implicit none
-        integer, parameter :: N = 40000
+        integer, parameter :: N = 20*1024*1024
         real :: x(N), y(N), a                   ! host arrays and scalar a
         real, device :: x_d(N), y_d(N)          ! device arrays
         type(dim3) :: grid, tBlock
@@ -51,6 +51,11 @@ program testSaxpy
         type(cudaEvent) :: startEvent, stopEvent
         integer :: istat
         real :: time
+
+        ! This will hold the effective GPU mem bandwidth
+        real :: bw
+        ! This will hold the effective GFLOPS
+        real :: gflops
         
         ! create cudaEvents
         istat = cudaEventCreate(startEvent)
@@ -58,7 +63,7 @@ program testSaxpy
 
         ! set the number of thread blocks to pass all N elements
         ! dim3 is a derived type for 3d structures (cuda grid)
-        tBlock = dim3(256,1,1)
+        tBlock = dim3(512,1,1)
         grid = dim3(ceiling(real(N)/tBlock%x), 1, 1)
 
         ! set values in the host
@@ -76,11 +81,22 @@ program testSaxpy
         call saxpy<<<grid, tBlock>>>(x_d, y_d, a)
         istat = cudaEventRecord(stopEvent, 0)
         istat = cudaEventSynchronize(stopEvent) ! this blocks cpu execution until stopEvent is recorded
-        istat = cudaEventElapsedTime(time, startEvent,stopEvent)        ! time is in ms
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
 
         ! transfer result back to host
         y = y_d
 
+        ! bandwidth calculation: first, number of bytes transfered per array read/write
+        bw = N*4
+        ! read x, read y, write y
+        bw = bw*3
+        ! divide by time and correct to print GB/s
+        bw = bw / time / 10**6
+
+        ! gflops calculation: saxpy is a multiply-add operation (2 flo per element)
+        gflops = 2*N / time / 10**6
         write(*,*) 'Kernel execution took: ', time, ' ms'
+        write(*,*) 'Effective bandwidth: ', bw, ' GB/s'
+        write(*,*) 'Effective GFLOPS: ', gflops
         write(*,*) 'Max error: ', maxval(abs(y-4.0))
 end program testSaxpy
