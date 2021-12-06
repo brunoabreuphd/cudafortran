@@ -94,6 +94,7 @@ program overlap_dt
 
 
         !! SEQUENTIAL data transfer + kernel execute
+        !! everything goes into the default stream (0)
         a = 0
         istat = cudaEventRecord(startEvent, 0)
         ! data transfer host -> kernel
@@ -108,5 +109,64 @@ program overlap_dt
         istat = cudaEventElapsedTime(time, startEvent, stopEvent)
         write(*,*) 'Time for sequential transfer and execute (ms): ', time
         write(*,*) ' Max error: ', maxval(abs(a-1.0))
+        write(*,*)
 
+
+
+        !! ASYNCHRONOUS 1: copy, kernel, copy, ...
+        a = 0
+        istat = cudaEventRecord(startEvent, 0)
+        ! slice data and distribute across streams
+        do i = 1, nStreams
+                offset = (i-1)*streamSize
+                ! transfer data host -> device
+                ! cudaMemcpyAsync(target, source, size, stream)
+                istat = cudaMemcpyAsync(a_d(offset+1), a(offset+1), streamSize, stream(i))
+                ! launch kernel
+                call sillykernel1<<<streamSize/blockSize, blockSize, 0, &
+                                        stream(i)>>>(a_d, offset)
+                ! copy back
+                istat = cudaMemcpyAsync(a(offset+1), a_d(offset+1), streamSize, stream(i))
+        enddo
+        ! synchronize events, get time
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        write(*,*) 'Time for Asynchronous V1 transfer and execute (ms): ', time
+        write(*,*) ' Max error: ', maxval(abs(a-1.0))
+        write(*,*)
+
+
+
+
+        !! ASYNCHRONOUS 2: loop over copy, loop over kernel, loop over copy
+        a = 0
+        istat = cudaEventRecord(startEvent, 0)
+        ! data transfer host -> device
+        do i = 1, nStreams
+                offset = (i-1)*streamSize
+                istat = cudaMemcpyAsync(a_d(offset+1), a(offset+1), &
+                                          streamSize, stream(i))
+        enddo
+        ! launch kernel
+        do i = 1, nStreams
+                offset = (i-1)*streamSize
+                call sillykernel1<<<streamSize/blockSize, blockSize, &
+                                0, stream(i)>>>(a_d,offset)
+        enddo
+        ! data transfer back
+        do i = 1, nStreams
+                offset = (i-1)*streamSize
+                istat = cudaMemcpyAsync(a(offset+1), a_d(offset+1), &
+                                         streamSize, stream(i))
+        enddo
+        ! synchronize and get time
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        write(*,*) 'Time for Asynchronous V2 transfer and execute (ms): ', time
+        write(*,*) ' Max error: ', maxval(abs(a-1.0))
+        write(*,*)
+        
+                
 end program overlap_dt
