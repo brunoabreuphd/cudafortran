@@ -51,14 +51,14 @@ program offsetAndStride
 
         ! get device props
         istat = cudaGetDeviceProperties(prop, 0)
-        write(*,'(/,"Device: ",a)') trim(prop%name)
+        write(*,'(/,"Device: ",a)') 'Device: ', trim(prop%name)
         write(*,'("Transfer size (MB): ",i0)') nMB
 
         ! print out precision
         if(kind(a_d) == singlePrecision) then
-                write(*,'a,/') 'Single Precision'
+                write(*,'(a,/)') 'Single Precision'
         else
-                write(*,'a,/') 'Double Precision'
+                write(*,'(a,/)') 'Double Precision'
         endif
 
         ! allocate device array
@@ -83,9 +83,25 @@ program offsetAndStride
                 ! print bw   
                 write(*,*) i, 2*nMB/time*(1.e+3/1024)
         enddo
+        write(*,*)
+
+
+        ! STRIDE KERNEL
+        write(*,*) 'Stride, Bandwidth (GB/s):'
+        call stride<<<n/blockSize, blockSize>>>(a_d,1)
+        do i = 1, 32
+                a_d = 0.0
+                istat = cudaEventRecord(startEvent,0)
+                call stride<<<n/blockSize, blockSize>>>(a_d, i)
+                istat = cudaEventRecord(stopEvent,0)
+                istat = cudaEventSynchronize(stopEvent)
+                istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+                ! print bw   
+                write(*,*) i, 2*nMB/time*(1.e+3/1024)
+        enddo
+        write(*,*)
         
-
-
+        
 
         ! clean up
         istat = cudaEventDestroy(startEvent)
