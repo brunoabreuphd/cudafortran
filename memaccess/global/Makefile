@@ -2,13 +2,13 @@
 FC=nvfortran
 FFLAGS=-Mcuda
 
-execs = memaccess
+execs = memaccess_global
 
 all: $(execs)
 
-memaccess: memaccess.o
+memaccess_global: memaccess_global.o
 	$(FC) $(FFLAGS) -o $@ $^
-memaccess.o: memaccess.f90
+memaccess_global.o: memaccess_global.f90
 	$(FC) $(FFLAGS) -c $^
 
 clean:
