@@ -168,5 +168,15 @@ program overlap_dt
         write(*,*) ' Max error: ', maxval(abs(a-1.0))
         write(*,*)
         
-                
+         
+
+        ! clean up
+        istat = cudaEventDestroy(startEvent)       
+        istat = cudaEventDestroy(stopEvent)       
+        istat = cudaEventDestroy(placeholderEvent)
+        do i = 1, nStreams
+                istat = cudaStreamDestroy(stream(i))
+        enddo
+        deallocate(a)
+       
 end program overlap_dt
