@@ -5,6 +5,9 @@ module sharedmemkernels
         implicit none
         integer, device :: n_d
 contains
+        ! kernels to reverse the order of an array
+        ! t is the direct order index
+        ! tr is the reversed order index
         attributes(global) subroutine staticReverse(d)
         ! store to shared mem, sync, load
                 real :: d(:)
@@ -13,11 +16,11 @@ contains
                 
                 t = threadIdx%x
                 tr = size(d) - t + 1
-                ! store
+                ! store from global to shared mem
                 s(t) = d(t)
-                ! sync
+                ! sync: make sure all threads have completed
                 call syncthreads()
-                ! load
+                ! load from shared to global
                 d(t) = s(tr)
         end subroutine staticReverse
 
@@ -25,7 +28,10 @@ contains
         ! same as above, but s is not static
                 real :: d(:)
                 integer :: t, tr
-                real, shared :: s(*)    ! dynamic block
+                ! dynamic allocation: size is implicitly determined
+                ! from the third execution config parameter
+                ! when the kernel is launched
+                real, shared :: s(*)
                 
                 t = threadIdx%x
                 tr = size(d) - t + 1
@@ -39,6 +45,8 @@ contains
                 real :: d(nSize)
                 integer, value :: nSize
                 integer :: t, tr
+                ! dynamic block: nSize is used to declare the size and
+                ! it comes from parameters in the kernel call
                 real, shared :: s(nSize)
 
                 t = threadIdx%x
@@ -51,6 +59,8 @@ contains
         attributes(global) subroutine dynamicReverse3(d)
         ! same, s size comes from device-stored value
                 real :: d(n_d)
+                ! dynamic block: n_d comes from a device-stored
+                ! variable that is copyed in host code
                 real, shared :: s(n_d)
                 integer :: t, tr
                 
@@ -97,6 +107,33 @@ program sharedmem
         ! copy data back to host
         d = d_d
         write(*,*) 'Static case max error: ', maxval(abs(r-d))
+        write(*,*)
 
+
+        ! DYNAMIC SHARED MEM V1 
+        d_d = a
+        ! the third argument in the kernel here is the amount 
+        ! of shared memory invoked (in bytes)
+        call dynamicReverse1<<<grid, threadBlock, 4*threadBlock%x>>>(d_d)
+        d = d_d
+        write(*,*) 'Dynamic case V1 max error: ', maxval(abs(r-d))
+        write(*,*)
+
+
+        ! DYNAMIC SHARED MEM V2 
+        d_d = a
+        call dynamicReverse2<<<grid, threadBlock, 4*threadBlock%x>>>(d_d,n)
+        d = d_d
+        write(*,*) 'Dynamic case V2 max error: ', maxval(abs(r-d))
+        write(*,*)
+
+
+        ! DYNAMIC SHARED MEM V3
+        n_d = n
+        d_d = a
+        call dynamicReverse3<<<grid, threadBlock, 4*threadBlock%x>>>(d_d)
+        d = d_d
+        write(*,*) 'Dynamic case V3 max error: ', maxval(abs(r-d))
+        write(*,*)
 
 end program sharedmem
