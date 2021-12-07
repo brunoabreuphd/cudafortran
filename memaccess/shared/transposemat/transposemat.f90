@@ -268,6 +268,24 @@ program transposemat
         call postprocess(gold, h_tdata, time)
         
 
+
+        ! COALESCED TRANSPOSITION KERNEL
+        write(*,'(a25)', advance='NO') 'coalesced transposition'
+        d_tdata = 0.0
+        call transposeCoalesced<<<dimGrid, dimBlock>>>(d_tdata, d_idata)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, NUM_REPS
+                call transposeCoalesced<<<dimGrid, dimBlock>>>(d_tdata, d_idata)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        h_tdata = d_tdata
+        call postprocess(gold, h_tdata, time)
+
+
+
+
 contains
         subroutine postprocess(ref, res, t)
         ! checks on bandwidth and results
