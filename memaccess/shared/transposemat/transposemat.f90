@@ -77,4 +77,19 @@ contains
                 enddo
         end subroutine copySharedMem
 
+        attributes(global) subroutine transposeNaive(odata, idata)
+        ! direct, simple transposition
+                implicit none
+                real, intent(out) :: odata(nx,ny)
+                real, intent(in) :: idata(nx,ny)
+                integer :: x, y, j
+
+                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+
+                do j = 0, TILE_DIM-1, BLOCK_ROWS
+                        odata(y+j,x) = idata(x,y+j)
+                enddo
+        end subroutine transposeNaive
+
 end module transposekernels
