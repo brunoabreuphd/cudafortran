@@ -62,8 +62,8 @@ contains
                 real, shared :: tile(TILE_DIM,TILE_DIM)
                 integer :: x, y, j
 
-                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%x - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM + threadIdx%y
 
                 ! copy data to tile
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
@@ -84,8 +84,8 @@ contains
                 real, intent(in) :: idata(nx,ny)
                 integer :: x, y, j
 
-                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%x - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM + threadIdx%y
 
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
                         odata(y+j,x) = idata(x,y+j)
@@ -101,8 +101,8 @@ contains
                 real, shared :: tile(TILE_DIM,TILE_DIM)
                 integer :: x, y, j
 
-                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%x - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM + threadIdx%y
 
                 ! copy data to tile
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
@@ -111,8 +111,8 @@ contains
                 ! sync threads
                 call syncthreads()
 
-                x = (blockIdx%y - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%x - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%y - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%x - 1) * TILE_DIM + threadIdx%y
 
                 ! copy data from tile
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
@@ -131,8 +131,8 @@ contains
                 real, shared :: tile(TILE_DIM+1,TILE_DIM)
                 integer :: x, y, j
 
-                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%x - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM + threadIdx%y
 
                 ! copy data to tile
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
@@ -141,8 +141,8 @@ contains
                 ! sync threads
                 call syncthreads()
 
-                x = (blockIdx%y - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%x - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%y - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%x - 1) * TILE_DIM + threadIdx%y
 
                 ! copy data from tile
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
