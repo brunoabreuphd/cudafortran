@@ -115,4 +115,84 @@ contains
                 block_lp(3) = dim3(lPencils, mz*sPencils/lPencils, 1)   
 
         end subroutine setDerivativeParameters
+
+
+        attributes(global) subroutine derivative_x(f, df)
+        ! kernel to calculate x derivatives
+                implicit none
+                ! function and derivative
+                real, intent(in) :: f(mx,my,mz)
+                real, intent(out) :: df(mx,my,mz)
+                ! pencil 
+                real, shared :: f_s(-3:mx+4, sPencils)
+                integer :: i, j, k, j_l
+
+                ! find the index for each thread to work on
+                i = threadIdx%x
+                j = (blockIdx%x-1)*blockDim%x + threadIdx%y
+                ! j_l is the shared memory version of j
+                j_l = threadIdx%y
+                k = blockIdx%y
+
+                f_s(i, j_l) = f(i,j,k)
+
+                call syncthreads()
+
+                ! periodic images to shared memory array
+                if (i <= 4) then
+                        f_s(i-4, j_l) = f_s(mx+i-5, j_l)
+                        f_s(mx+i, j_l) = f_s(i+1, j_l)
+                endif
+
+                call syncthreads()
+
+                ! derivative expression
+                df(i,j,k) = &
+                        (ax_c*( f_s(i+1,j_l) - f_s(i-1,j_l) )) &
+                        + bx_c*( f_s(i+2,j_l) - f_s(i-2,j_l) ) &
+                        + cx_c*( f_s(i+3,j_l) - f_s(i-3,j_l) ) &
+                        + dx_c*( f_s(i+4,j_l) - f_s(i-4,j_l) ) 
+
+        end subroutine derivative_x
+
+        attributes(global) subroutine derivative_x_lPencils(f, df)
+        ! this is another version of the derivative for lPencil, 64x32 tiles
+        ! with the same number of threads as before
+                implicit none
+                real, intent(in) :: f(mx,my,mz)
+                real, intent(out) :: df(mx,my,mz)
+                real, shared :: f_s(-3:mx+4, lPencils)
+                integer :: i, j, k, j_l, jBase
+
+                i = threadIdx%x
+                jBase = (blockIdx%x-1) * lPencils
+                k = blockIdx%y
+
+                do j_l = threadIdx%y, lPencils, blockDim%y
+                        j = jBase + j_l
+                        f_s(i, j_l) = f(i,j,k)
+                enddo
+                call syncthreads()
+
+                if(i <= 4) then
+                        do j_l = threadIdx%y, lPencils, blockDim%y
+                                f_s(i-4, j_l) = f_s(mx+i-5, j_l)
+                                f_s(mx+i, j_l) = f_s(i+1, j_l)
+                        enddo
+                endif
+                call syncthreads()
+
+                do j_l = threadIdx%y, lPencils, blockDim%y
+                        j = jBase + j_l
+                        df(i,j,k) = &
+                                (ax_c*( f_s(i+1,j_l) - f_s(i-1,j_l) )) &
+                                + bx_c*( f_s(i+2,j_l) - f_s(i-2,j_l) ) &
+                                + cx_c*( f_s(i+3,j_l) - f_s(i-3,j_l) ) &
+                                + dx_c*( f_s(i+4,j_l) - f_s(i-4,j_l) ) 
+                enddo
+
+        end subroutine derivative_x_lPencils
+                        
+
+
 end module derivative_m
