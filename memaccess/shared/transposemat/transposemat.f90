@@ -54,4 +54,27 @@ contains
                 enddo
         end subroutine copy
 
+        attributes(global) subroutine copySharedMem(odata, idata)
+        ! copy data using shared mem
+                implicit none
+                real, intent(out) :: odata(nx,ny)
+                real, intent(in) :: idata(nx,ny)
+                real, shared :: tile(TILE_DIM,TILE_DIM)
+                integer :: x, y, j
+
+                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+
+                ! copy data to tile
+                do j = 0, TILE_DIM-1, BLOCK_ROWS
+                        tile(threadIdx%x,threadIdx%y+j) = idata(x,y+j)
+                enddo
+                ! sync threads
+                call syncthreads()
+                ! copy data from tile
+                do j = 0, TILE_DIM-1, BLOCK_ROWS
+                        odata(x,y+j) = tile(threadIdx%x,threadIdx%y+j)
+                enddo
+        end subroutine copySharedMem
+
 end module transposekernels
