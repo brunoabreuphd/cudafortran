@@ -151,3 +151,103 @@ contains
         end subroutine transposeNoBanksConflict
 
 end module transposekernels
+
+
+program transposemat
+        use cudafor
+        use transposekernels
+        implicit none
+        ! grid and block
+        type(dim3) :: dimGrid, dimBlock
+        ! cuda Events to track time
+        type(cudaEvent) :: startEvent, stopEvent
+        real :: time
+        ! cuda Device props
+        type(cudaDeviceProp) :: prop
+        ! host arrays
+        real :: h_idata(nx,ny), h_cdata(nx,ny), h_tdata(ny,nx), gold(ny,nx)
+        ! device arrays
+        real, device :: d_idata(nx,ny), d_cdata(nx,ny), d_tdata(ny,nx)
+        ! aux integers
+        integer :: i, j, istat
+
+        ! check if nx,ny is a multiple of TILE_DIM
+        if (mod(nx, TILE_DIM) /= 0 .or. mod(ny, TILE_DIM) /= 0) then
+                write(*,*) 'nx, ny must be a multiple of TILE_DIM'
+                stop
+        endif
+        ! check if TIME_DIM is a multiple of BLOCK_ROWS
+        if (mod(TILE_DIM, BLOCK_ROWS) /= 0) then
+                write(*,*) 'TILE_DIM must be a multiple of BLOCK_ROWS'
+                stop
+        endif
+
+        ! define grid and blocks
+        dimGrid = dim3(nx/TILE_DIM, ny/TILE_DIM, 1)
+        dimBlock = dim3(TILE_DIM, BLOCK_ROWS, 1)
+
+        ! print out device and selected parameters
+        istat = cudaGetDeviceProperties(prop, 0)
+        write(*, '("Device: ", a)') trim(prop%name)
+        write(*, '("Matrix size: ", i5, i5)') nx, ny
+        write(*, '("Block size: ", i3, i3)') TILE_DIM, BLOCK_ROWS
+        write(*, '("Tile size: ", i3, i3)') TILE_DIM, TILE_DIM
+        write(*, '("CUDA Grid: ", i4, i4, i4)') dimGrid%x, dimGrid%y, dimGrid%z
+        write(*, '("Block dims: ", i4, i4, i4)') dimBlock%x, dimBlock%y, dimBlock%z
+
+        ! give values to host arrays
+        do j = 1, ny
+                do i = 1, nx
+                        h_idata(i,j) = i + (j-1)*nx
+                enddo
+        enddo
+        ! transpose it using Fortran implicit routine
+        gold = transpose(h_idata)
+
+        ! send it to device
+        d_idata = h_idata
+        d_tdata = 0.0
+        d_cdata = 0.0
+
+        ! create cuda events
+        istat = cudaEventCreate(startEvent)
+        istat = cudaEventCreate(stopEvent)
+
+
+        ! start calling and measuring the kernels
+        write(*,'(/,a25,a25, a25)') 'Routine', 'Bandwidth (GB/s)'
+
+
+        ! COPY KERNEL
+        write(*,'(a25)', advance='NO') 'copy'
+        ! warm up gpu with a single call
+        call copy<<<dimGrid, dimBlock>>>(d_cdata, d_idata)
+        ! trigger events and call kernel several times
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, NUM_REPS
+                call copy<<<dimGrid, dimBlock>>>(d_cdata, d_idata)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        ! send copied data back to host 
+        h_cdata = d_cdata
+        ! verify data, calculate bandwidth
+        call postprocess(h_idata, h_cdata, time)
+                
+
+
+contains
+        subroutine postprocess(ref, res, t)
+        ! checks on bandwidth and results
+                real, intent(in) :: ref(:,:), res(:,:), t
+                if (all(res == ref)) then
+                        write(*, '(f20.2)') 2.0*1000*mem_size / (10**9 * t/NUM_REPS)
+                else
+                        write(*,'(a20)') '*** Failed! ***'
+                endif
+        end subroutine postprocess
+
+
+end program transposemat
+
