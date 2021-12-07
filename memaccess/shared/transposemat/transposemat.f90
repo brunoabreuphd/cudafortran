@@ -237,6 +237,37 @@ program transposemat
                 
 
 
+        ! COPY SHARED MEM KERNEL
+        write(*,'(a25)', advance='NO') 'copy shared mem'
+        d_cdata = 0.0
+        call copySharedMem<<<dimGrid, dimBlock>>>(d_cdata, d_idata)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, NUM_REPS
+                call copySharedMem<<<dimGrid, dimBlock>>>(d_cdata, d_idata)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        h_cdata = d_cdata
+        call postprocess(h_idata, h_cdata, time)
+        
+
+
+        ! NAIVE TRANSPOSITION KERNEL
+        write(*,'(a25)', advance='NO') 'naive transposition'
+        d_tdata = 0.0
+        call transposeNaive<<<dimGrid, dimBlock>>>(d_tdata, d_idata)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, NUM_REPS
+                call transposeNaive<<<dimGrid, dimBlock>>>(d_tdata, d_idata)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        h_tdata = d_tdata
+        call postprocess(gold, h_tdata, time)
+        
+
 contains
         subroutine postprocess(ref, res, t)
         ! checks on bandwidth and results
