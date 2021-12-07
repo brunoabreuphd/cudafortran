@@ -285,6 +285,26 @@ program transposemat
 
 
 
+        ! NO BANK CONFLICTS TRANSPOSITION KERNEL
+        write(*,'(a25)', advance='NO') 'conflict-free transposition'
+        d_tdata = 0.0
+        call transposeNoBanksConflict<<<dimGrid, dimBlock>>>(d_tdata, d_idata)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, NUM_REPS
+                call transposeNoBanksConflict<<<dimGrid, dimBlock>>>(d_tdata, d_idata)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        h_tdata = d_tdata
+        call postprocess(gold, h_tdata, time)
+
+
+        
+        ! clean up
+        istat = cudaEventDestroy(startEvent)
+        istat = cudaEventDestroy(stopEvent)
+        
 
 contains
         subroutine postprocess(ref, res, t)
