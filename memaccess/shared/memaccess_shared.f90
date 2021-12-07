@@ -1,3 +1,6 @@
+!! This code is entirely based on the following NVIDIA blog post:
+!! https://developer.nvidia.com/blog/using-shared-memory-cuda-fortran/
+!!
 module sharedmemkernels
         implicit none
         integer, device :: n_d
@@ -59,3 +62,41 @@ contains
         end subroutine dynamicReverse3
 
 end module sharedmemkernels
+
+
+program sharedmem
+        use cudafor
+        use sharedmemkernels
+        implicit none
+        ! size of arrays
+        integer, parameter :: n = 64
+        ! host and device arrays
+        real :: a(n), r(n), d(n)
+        real, device :: d_d(n)
+        ! cuda thread blocks parameters
+        type(dim3) :: grid, threadBlock
+        ! aux variables
+        integer :: i
+
+        
+        ! defining the grid
+        threadBlock = dim3(n,1,1)
+        grid = dim3(1,1,1)
+        ! assign array values
+        do i = 1, n
+                a(i) = i
+                r(i) = n - i + 1
+        enddo
+
+
+        ! STATIC SHARED MEMORY
+        ! get data into device
+        d_d = a
+        ! launch static kernel
+        call staticReverse<<<grid, threadBlock>>>(d_d)
+        ! copy data back to host
+        d = d_d
+        write(*,*) 'Static case max error: ', maxval(abs(r-d))
+
+
+end program sharedmem
