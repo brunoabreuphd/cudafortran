@@ -46,8 +46,8 @@ contains
                 real, intent(in) :: idata(nx,ny)
                 integer :: x, y, j
 
-                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
-                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+                x = (blockIdx%x - 1) * TILE_DIM + threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM + threadIdx%y
 
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
                         odata(x,y+j) = idata(x,y+j)
