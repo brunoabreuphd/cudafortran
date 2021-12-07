@@ -110,10 +110,44 @@ contains
                 enddo
                 ! sync threads
                 call syncthreads()
+
+                x = (blockIdx%y - 1) * TILE_DIM * threadIdx%x
+                y = (blockIdx%x - 1) * TILE_DIM * threadIdx%y
+
                 ! copy data from tile
                 do j = 0, TILE_DIM-1, BLOCK_ROWS
                         odata(x,y+j) = tile(threadIdx%y+j, threadIdx%x)
                 enddo
         end subroutine transposeCoalesced
+
+        attributes(global) subroutine transposeNoBanksConflict(odata, idata)
+        ! transpose using shared memory
+        ! this makes threads in a warp access global memory at the same time
+        ! but now without mem banks conflict
+                implicit none
+                real, intent(out) :: odata(nx,ny)
+                real, intent(in) :: idata(nx,ny)
+                ! padding the tile eliminates mem bank conflicts
+                real, shared :: tile(TILE_DIM+1,TILE_DIM)
+                integer :: x, y, j
+
+                x = (blockIdx%x - 1) * TILE_DIM * threadIdx%x
+                y = (blockIdx%y - 1) * TILE_DIM * threadIdx%y
+
+                ! copy data to tile
+                do j = 0, TILE_DIM-1, BLOCK_ROWS
+                        tile(threadIdx%x,threadIdx%y+j) = idata(x,y+j)
+                enddo
+                ! sync threads
+                call syncthreads()
+
+                x = (blockIdx%y - 1) * TILE_DIM * threadIdx%x
+                y = (blockIdx%x - 1) * TILE_DIM * threadIdx%y
+
+                ! copy data from tile
+                do j = 0, TILE_DIM-1, BLOCK_ROWS
+                        odata(x,y+j) = tile(threadIdx%y+j, threadIdx%x)
+                enddo
+        end subroutine transposeNoBanksConflict
 
 end module transposekernels
