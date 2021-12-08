@@ -194,5 +194,109 @@ contains
         end subroutine derivative_x_lPencils
                         
 
-
 end module derivative_m
+
+
+program finitediff
+        use cudafor
+        use derivative_m
+        implicit none
+
+        real, parameter :: fx = 1.0, fy = 1.0, fz = 1.0
+        integer, parameter :: nReps = 20
+        ! allocate host and device arrays
+        real :: f(mx,my,mz), df(mx,my,mz), sol(mx,my,mz)
+        real, device :: f_d(mx,my,mz), df_d(mx,my,mz)
+        ! cuda Events and props
+        type(cudaEvent) :: startEvent, stopEvent
+        type(cudaDeviceProp) :: prop
+        ! aux variables
+        real :: twopi, error, maxError
+        real :: time
+        integer :: i, j, k, istat
+
+
+        ! print device props
+        istat = cudagetDeviceProperties(prop, 0)
+        write(*, "(/, 'Device Name: ',a)") trim(prop%name)
+        write(*, "('Compute capability: ', i0, '.', i0)") prop%major, prop%minor
+
+        ! initialize constants
+        twopi = 8.0 * atan(1.d0)
+        call setDerivativeParameters()
+
+        ! create cuda events
+        istat = cudaEventCreate(startEvent)
+        istat = cudaEventCreate(stopEvent)
+
+
+        !! X-DERIVATIVE USING 64x4 TILE (sPencil)
+        write(*, "(/,'x derivatives')")
+        ! give values to the function
+        do i = 1, mx
+                f(i,:,:) = cos(fx*twopi(i-1.0)/(mx-1))
+        enddo
+        ! copy values from host to device
+        f_d = f
+        df_d = 0.0
+        ! warm up the kernel
+        call derivative_x<<<grid_sp(1), block_sp(1)>>>(f_d, df_d)
+        ! launch kernel repeatedly
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, nReps
+                call derivative_x<<<grid_sp(1), block_sp(1)>>>(f_d, df_d)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        ! copy differential from device to host
+        df = df_d
+        ! write analytical solution
+        do i = 1, mx
+                sol(i,:,:) = -fx*twopi*sin(fx*twopi*(i-1.0)/(mx-1))
+        enddo
+        ! compare numerical to analytical
+        error = sqrt(sum((sol - df)**2)/(mx*my*mz))
+        maxError = maxval(abs(sol - df))
+        ! print results
+        write(*,"(/,' Using shared memory tile of x=', i0, ', y=', i0)") &
+                        mx, sPencils
+        write(*,*) ' RMS error: ', error
+        write(*,*) ' Max error: ', maxError
+        write(*,*) ' Avg execution time: ', time/nReps
+        write(*,*) ' Avg Bandwidth (GB/s): ' 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
+        
+
+        !! X-DERIVATIVE USING EXTENDED TILE (lPencils))
+        do i = 1, mx
+                f(i,:,:) = cos(fx*twopi(i-1.0)/(mx-1))
+        enddo
+        f_d = f
+        df_d = 0.0
+        call derivative_x_lPencils<<<grid_sp(1), block_sp(1)>>>(f_d, df_d)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, nReps
+                call derivative_x_lPencils<<<grid_sp(1), block_sp(1)>>>(f_d, df_d)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        df = df_d
+        do i = 1, mx
+                sol(i,:,:) = -fx*twopi*sin(fx*twopi*(i-1.0)/(mx-1))
+        enddo
+        error = sqrt(sum((sol - df)**2)/(mx*my*mz))
+        maxError = maxval(abs(sol - df))
+        write(*,"(/,' Using shared memory tile of x=', i0, ', y=', i0)") &
+                        mx, lPencils
+        write(*,*) ' RMS error: ', error
+        write(*,*) ' Max error: ', maxError
+        write(*,*) ' Avg execution time: ', time/nReps
+        write(*,*) ' Avg Bandwidth (GB/s): ' 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
+
+
+        ! cleanup
+        istat = cudaEventDestroy(startEvent)
+        istat = cudaEventDestroy(stopEvent)
+
+end program finitediff
