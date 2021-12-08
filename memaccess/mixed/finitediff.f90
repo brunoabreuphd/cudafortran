@@ -34,7 +34,7 @@ module derivative_m
 
         ! set cubic grid and arrays
         integer, parameter :: mx = 64, my = 64, mz = 64
-        real :: x(mx), y(my), x(mz)
+        real :: x(mx), y(my), z(mz)
 
         ! shared memory tiles are (m*, *Pencils)
         ! sPencils: each thread calculates derivative at one point
@@ -234,7 +234,7 @@ program finitediff
         write(*, "(/,'x derivatives')")
         ! give values to the function
         do i = 1, mx
-                f(i,:,:) = cos(fx*twopi(i-1.0)/(mx-1))
+                f(i,:,:) = cos(fx*twopi*(i-1.0)/(mx-1))
         enddo
         ! copy values from host to device
         f_d = f
@@ -264,12 +264,12 @@ program finitediff
         write(*,*) ' RMS error: ', error
         write(*,*) ' Max error: ', maxError
         write(*,*) ' Avg execution time: ', time/nReps
-        write(*,*) ' Avg Bandwidth (GB/s): ' 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
+        write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
         
 
         !! X-DERIVATIVE USING EXTENDED TILE (lPencils))
         do i = 1, mx
-                f(i,:,:) = cos(fx*twopi(i-1.0)/(mx-1))
+                f(i,:,:) = cos(fx*twopi*(i-1.0)/(mx-1))
         enddo
         f_d = f
         df_d = 0.0
@@ -292,7 +292,7 @@ program finitediff
         write(*,*) ' RMS error: ', error
         write(*,*) ' Max error: ', maxError
         write(*,*) ' Avg execution time: ', time/nReps
-        write(*,*) ' Avg Bandwidth (GB/s): ' 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
+        write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
 
 
         ! cleanup
