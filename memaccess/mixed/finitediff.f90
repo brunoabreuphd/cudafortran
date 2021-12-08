@@ -223,7 +223,7 @@ contains
 
                 call syncthreads()
 
-                if (i <= 4) then
+                if (j <= 4) then
                         f_s(i_l, j-4) = f_s(i_l, my+j-5)
                         f_s(i_l, my+j) = f_s(i_l, j+1)
                 endif
@@ -235,7 +235,6 @@ contains
                         + by_c*( f_s(i_l,j+2) - f_s(i_l,j-2) ) &
                         + cy_c*( f_s(i_l,j+3) - f_s(i_l,j-3) ) &
                         + dy_c*( f_s(i_l,j+4) - f_s(i_l,j-4) ) 
-                enddo
 
         end subroutine derivative_y
 
@@ -343,6 +342,33 @@ program finitediff
 
 
         !! NOW Y-DERIVATIVES (same thing!)
+        write(*, "(/,'y derivatives')")
+        ! first with sPencil
+        do j = 1, my
+                f(:,j,:) = cos(fy*twopi*(j-1.0)/(my-1))
+        enddo
+        f_d = f
+        df_d = 0.0
+        call derivative_y<<<grid_sp(2), block_sp(2)>>>(f_d, df_d)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, nReps
+                call derivative_y<<<grid_sp(2), block_sp(2)>>>(f_d, df_d)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        df = df_d
+        do j = 1, my
+                sol(:,j,:) = -fy*twopi*sin(fy*twopi*(j-1.0)/(my-1))
+        enddo
+        error = sqrt(sum((sol - df)**2)/(mx*my*mz))
+        maxError = maxval(abs(sol - df))
+        write(*,"(/,' Using shared memory tile of x=', i0, ', y=', i0)") &
+                        sPencils, my
+        write(*,*) ' RMS error: ', error
+        write(*,*) ' Max error: ', maxError
+        write(*,*) ' Avg execution time (ms): ', time/nReps
+        write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
 
 
 
