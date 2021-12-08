@@ -239,6 +239,41 @@ contains
         end subroutine derivative_y
 
 
+        attributes(global) subroutine derivative_y_lPencils(f, df)
+        ! this is another version of the y-derivative for lPencil, 32x64 tiles
+        ! with the same number of threads as before
+                implicit none
+                real, intent(in) :: f(mx,my,mz)
+                real, intent(out) :: df(mx,my,mz)
+                real, shared :: f_s(lPencils, -3:my+4)
+                integer :: i, i_l, j, k
+
+                i = (blockIdx%x-1)*blockDim%x + threadIdx%x
+                i_l = threadIdx%x
+                k = blockIdx%y
+
+                do j = threadIdx%y, my, blockDim%y
+                        f_s(i_l, j) = f(i,j,k)
+                enddo
+                call syncthreads()
+
+                j = threadIdx%y
+                if(j <= 4) then
+                        f_s(i_l, j-4) = f_s(i_l, my+j-5)
+                        f_s(i_l, my+j) = f_s(i_l, j+1)
+                endif
+                call syncthreads()
+
+                do j = threadIdx%y, my, blockDim%y
+                        df(i,j,k) = &
+                                (ay_c*( f_s(i_l,j+1) - f_s(i_l,j-1) )) &
+                                + by_c*( f_s(i_l,j+2) - f_s(i_l,j-2) ) &
+                                + cy_c*( f_s(i_l,j+3) - f_s(i_l,j-3) ) &
+                                + dy_c*( f_s(i_l,j+4) - f_s(i_l,j-4) ) 
+                enddo
+
+        end subroutine derivative_y_lPencils
+
 end module derivative_m
 
 
@@ -370,6 +405,32 @@ program finitediff
         write(*,*) ' Avg execution time (ms): ', time/nReps
         write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
 
+        ! now with lPencil
+        do j = 1, my
+                f(:,j,:) = cos(fy*twopi*(j-1.0)/(my-1))
+        enddo
+        f_d = f
+        df_d = 0.0
+        call derivative_y_lPencils<<<grid_lp(2), block_lp(2)>>>(f_d, df_d)
+        istat = cudaEventRecord(startEvent, 0)
+        do i = 1, nReps
+                call derivative_y_lPencils<<<grid_lp(2), block_lp(2)>>>(f_d, df_d)
+        enddo
+        istat = cudaEventRecord(stopEvent, 0)
+        istat = cudaEventSynchronize(stopEvent)
+        istat = cudaEventElapsedTime(time, startEvent, stopEvent)
+        df = df_d
+        do j = 1, my
+                sol(:,j,:) = -fy*twopi*sin(fy*twopi*(j-1.0)/(my-1))
+        enddo
+        error = sqrt(sum((sol - df)**2)/(mx*my*mz))
+        maxError = maxval(abs(sol - df))
+        write(*,"(/,' Using shared memory tile of x=', i0, ', y=', i0)") &
+                        lPencils, my
+        write(*,*) ' RMS error: ', error
+        write(*,*) ' Max error: ', maxError
+        write(*,*) ' Avg execution time (ms): ', time/nReps
+        write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
 
 
         ! cleanup
