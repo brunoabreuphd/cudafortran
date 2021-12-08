@@ -129,7 +129,7 @@ contains
 
                 ! find the index for each thread to work on
                 i = threadIdx%x
-                j = (blockIdx%x-1)*blockDim%x + threadIdx%y
+                j = (blockIdx%x-1)*blockDim%y + threadIdx%y
                 ! j_l is the shared memory version of j
                 j_l = threadIdx%y
                 k = blockIdx%y
@@ -263,7 +263,7 @@ program finitediff
                         mx, sPencils
         write(*,*) ' RMS error: ', error
         write(*,*) ' Max error: ', maxError
-        write(*,*) ' Avg execution time: ', time/nReps
+        write(*,*) ' Avg execution time (ms): ', time/nReps
         write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
         
 
@@ -273,10 +273,10 @@ program finitediff
         enddo
         f_d = f
         df_d = 0.0
-        call derivative_x_lPencils<<<grid_sp(1), block_sp(1)>>>(f_d, df_d)
+        call derivative_x_lPencils<<<grid_lp(1), block_lp(1)>>>(f_d, df_d)
         istat = cudaEventRecord(startEvent, 0)
         do i = 1, nReps
-                call derivative_x_lPencils<<<grid_sp(1), block_sp(1)>>>(f_d, df_d)
+                call derivative_x_lPencils<<<grid_lp(1), block_lp(1)>>>(f_d, df_d)
         enddo
         istat = cudaEventRecord(stopEvent, 0)
         istat = cudaEventSynchronize(stopEvent)
@@ -291,7 +291,7 @@ program finitediff
                         mx, lPencils
         write(*,*) ' RMS error: ', error
         write(*,*) ' Max error: ', maxError
-        write(*,*) ' Avg execution time: ', time/nReps
+        write(*,*) ' Avg execution time (ms): ', time/nReps
         write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
 
 
