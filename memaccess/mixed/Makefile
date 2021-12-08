@@ -1,6 +1,6 @@
 # module load nvhpc/21.7 on Bridges-2
 FC=nvfortran
-FFLAGS=-Mcuda
+FFLAGS=-Mcuda=ptxinfo
 
 execs = finitediff
 
