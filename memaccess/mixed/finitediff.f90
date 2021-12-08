@@ -48,7 +48,9 @@ module derivative_m
         type(dim3) :: grid_lp(3), block_lp(3)
 
         ! stencil coefficients (eight-order here)
+        ! "constant" is read-only for the device, read-write for host
         real, constant :: ax_c, bx_c, cx_c, dx_c
+        real, constant :: ay_c, by_c, cy_c, dy_c
 
 contains
         
@@ -95,11 +97,21 @@ contains
                 cx_c = 4.0 / 105.0 * dsinv
                 dx_c = -1.0 / 280.0 * dsinv
 
+                dsinv = real(my - 1)
+                do i = j, my
+                        y(j) = (j-1.0)/(my-1.0)
+                enddo
+                ay_c = 4.0 / 5.0 * dsinv
+                by_c = -1.0 / 5.0 * dsinv
+                cy_c = 4.0 / 105.0 * dsinv
+                dy_c = -1.0 / 280.0 * dsinv
+
+
                 ! configure grid and blocks for the Pencils
                 grid_sp(1) = dim3(my/sPencils, mz, 1)
                 block_sp(1) = dim3(mx, sPencils, 1)
                 grid_lp(1) = dim3(my/lPencils, mz, 1)
-                block_lp(1) = dim3(mx, lPencils, 1)
+                block_lp(1) = dim3(mx, sPencils, 1)
 
                 grid_sp(2) = dim3(mx/sPencils, mz, 1)
                 block_sp(2) = dim3(sPencils, my, 1)
@@ -194,6 +206,40 @@ contains
         end subroutine derivative_x_lPencils
                         
 
+        attributes(global) subroutine derivative_y(f, df)
+        ! kernel to calculate y derivatives
+                implicit none
+                real, intent(in) :: f(mx,my,mz)
+                real, intent(out) :: df(mx,my,mz)
+                real, shared :: f_s(sPencils, -3:my+4)
+                integer :: i, i_l, j, k
+
+                i = (blockIdx%x-1)*blockDim%x + threadIdx%x
+                i_l = threadIdx%x
+                j = threadIdx%y
+                k = blockIdx%y
+
+                f_s(i_l, j) = f(i,j,k)
+
+                call syncthreads()
+
+                if (i <= 4) then
+                        f_s(i_l, j-4) = f_s(i_l, my+j-5)
+                        f_s(i_l, my+j) = f_s(i_l, j+1)
+                endif
+
+                call syncthreads()
+
+                df(i,j,k) = &
+                        (ay_c*( f_s(i_l,j+1) - f_s(i_l,j-1) )) &
+                        + by_c*( f_s(i_l,j+2) - f_s(i_l,j-2) ) &
+                        + cy_c*( f_s(i_l,j+3) - f_s(i_l,j-3) ) &
+                        + dy_c*( f_s(i_l,j+4) - f_s(i_l,j-4) ) 
+                enddo
+
+        end subroutine derivative_y
+
+
 end module derivative_m
 
 
@@ -267,7 +313,7 @@ program finitediff
         write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
         
 
-        !! X-DERIVATIVE USING EXTENDED TILE (lPencils))
+        !! X-DERIVATIVE USING EXTENDED TILE (lPencils)
         do i = 1, mx
                 f(i,:,:) = cos(fx*twopi*(i-1.0)/(mx-1))
         enddo
@@ -293,6 +339,11 @@ program finitediff
         write(*,*) ' Max error: ', maxError
         write(*,*) ' Avg execution time (ms): ', time/nReps
         write(*,*) ' Avg Bandwidth (GB/s): ', 2.0*1000*sizeof(f)/(1024**3 * time/nReps)
+
+
+
+        !! NOW Y-DERIVATIVES (same thing!)
+
 
 
         ! cleanup
