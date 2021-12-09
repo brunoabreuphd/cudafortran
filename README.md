@@ -9,16 +9,16 @@ The codes come in four different main topics, which are detailed below. I includ
 
 
 ## [devicequery](./devicequery)
-[devicequery.f90](/devicequery/devicequery.f90) is a minimal code that uses ```cudaGetDeviceProperties``` to list some properties of the device in qhich your code will be running.
+[devicequery.f90](/devicequery/devicequery.f90) is a minimal code that uses ```cudaGetDeviceProperties``` to list some properties of the device in qhich your code will be running. PR [#3](https://github.com/babreu-ncsa/cudafortran/pull/3) added this code to the repository.
 
 ## [metrics](./metrics)
 Here there are a handful of direct implementations of the calculations of some performance metrics when executing CUDA kernels. For a complex application it will be very hard to tell exactly how many operations (read-write, fps and so on) your kernel is performing, for whcih situation a profiler is adequate. However, to discuss the basics, this is quite useful.
 
 - [plain](./metrics/plain): contains a simple kernel that performs SAXPY. The performance of this kernel is then addressed over the remaining folders.
 - [timing](./metrics/timing): two examples on how to time kernel executions. One uses Fortran's intrinsic clock, the other uses ```cudaEvents```.
-- [bandwidth](./metrics/bandwidth): simple calculation of the bandwidth for a kernel execution (total number of operations, multiplied by the number of bits involved in each of them, divided by the kernel execution time).
-- [gflops](./metrics/gflops): since the SAXPY kernel is a multiply-add operation, we can easily calculate the floating point operations per second achieved by the kernel from the previous bandwidth calculation.
-- [errorcheck](./metrics/errorcheck): simple way to investigate possible errors over each call to CUDA Fortran library calls.
+- [bandwidth](./metrics/bandwidth): simple calculation of the bandwidth for a kernel execution (total number of operations, multiplied by the number of bits involved in each of them, divided by the kernel execution time). See PR [#1](https://github.com/babreu-ncsa/cudafortran/pull/1) for development.
+- [gflops](./metrics/gflops): since the SAXPY kernel is a multiply-add operation, we can easily calculate the floating point operations per second achieved by the kernel from the previous bandwidth calculation. See PR [#2](https://github.com/babreu-ncsa/cudafortran/pull/2) for develoment.
+- [errorcheck](./metrics/errorcheck): simple way to investigate possible errors over each call to CUDA Fortran library calls. See PR [#4](https://github.com/babreu-ncsa/cudafortran/pull/4) for development.
 
 ## [datatransfer](./datatransfer) 
 
