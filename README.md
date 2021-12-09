@@ -20,6 +20,11 @@ Here there are a handful of direct implementations of the calculations of some p
 - [gflops](./metrics/gflops): since the SAXPY kernel is a multiply-add operation, we can easily calculate the floating point operations per second achieved by the kernel from the previous bandwidth calculation. See PR [#2](https://github.com/babreu-ncsa/cudafortran/pull/2) for develoment.
 - [errorcheck](./metrics/errorcheck): simple way to investigate possible errors over each call to CUDA Fortran library calls. See PR [#4](https://github.com/babreu-ncsa/cudafortran/pull/4) for development.
 
-## [datatransfer](./datatransfer) 
+## [datatransfer](./datatransfer)
+- [simple](./datatransfer/simple): this is a simple code to send data from host to device, and then back from device to host.
+- [pinned](./datatransfer/pinned): here, the bandwidth for two types of datatransfer between host and device is calculated. One uses host-pageable memory, the other uses host-pinned-memory.
+- [overlap](./datatransfer/overlap): data transfers are, by default, synchronous operations, while kernel executions are asynchronous operations. This code explores the concept of *CUDA streams* to try to take advantage of these features, achieving high performance by overlapping data transfers with kernel executions in a controlled fashion.
+
+For the applications resulting from source codes in this folder, it is interesting to see how much time is being spent in data transfers by using ```nvprof```. The development is somehow documented on PR [#5](https://github.com/babreu-ncsa/cudafortran/pull/5).
 
 ## [memaccess](./memaccess) 
