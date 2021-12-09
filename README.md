@@ -27,4 +27,9 @@ Here there are a handful of direct implementations of the calculations of some p
 
 For the applications resulting from source codes in this folder, it is interesting to see how much time is being spent in data transfers by using ```nvprof```. The development is somehow documented on PR [#5](https://github.com/babreu-ncsa/cudafortran/pull/5).
 
-## [memaccess](./memaccess) 
+## [memaccess](./memaccess)
+In similarity to the host (CPU) memory hierarchy, the device memory also has a structure that, if explored correctly, can yield significant performance improvements to CUDA kernels. The development of the codes below can be tracked on PR [#6](https://github.com/babreu-ncsa/cudafortran/pull/6).
+### [global](./memaccess/global)
+
+### [shared](./memaccess/shared)
+### [mixed](./memaccess/mixed)
