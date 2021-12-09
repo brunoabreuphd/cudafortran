@@ -2,13 +2,13 @@
 FC=nvfortran
 FFLAGS=-Mcuda
 
-execs = bandwidth
+execs = devicequery
 
 all: $(execs)
 
-bandwidth: bandwidth.o
+devicequery: devicequery.o
 	$(FC) $(FFLAGS) -o $@ $^
-bandwidth.o: bandwidth.f90
+devicequery.o: devicequery.f90
 	$(FC) $(FFLAGS) -c $^
 
 clean:
