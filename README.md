@@ -38,6 +38,6 @@ CUDA thread blocks have much faster access to their local, shared memory (compar
 - [transposemat](./memaccess/shared/transposemat): an application of the previous concepts where matrix tranposition achieves almost-ideal bandwidth.
 
 ### [mixed](./memaccess/mixed)
-Of course that, in a reallistic scenario, one will need to deal with data living and being transferred from and two both shared and global memory. The modern CUDA versions indeed do a very good job on managing this process efficiently. However, to obtain the most of performance, some tuning can be very useful. 
+Of course that, in a reallistic scenario, one will need to deal with data living and being transferred from and to both shared and global memory. The modern CUDA versions indeed do a very good job on managing this process efficiently. However, to obtain the most of performance, some tuning can be very useful. 
 
 This folder contains an application that implements numerical derivatives using the Finite Difference method on a cubic grid. It is demonstrated that performance can be affected by the way the tiling decomposition (using stencils) is performed.
