@@ -30,6 +30,14 @@ For the applications resulting from source codes in this folder, it is interesti
 ## [memaccess](./memaccess)
 In similarity to the host (CPU) memory hierarchy, the device memory also has a structure that, if explored correctly, can yield significant performance improvements to CUDA kernels. The development of the codes below can be tracked on PR [#6](https://github.com/babreu-ncsa/cudafortran/pull/6).
 ### [global](./memaccess/global)
+This is a simple demonstration of how accessing contiguous (using an *offset* kernel) and non-contiguous (using a *stride* kernel) memory can impact performance.
 
 ### [shared](./memaccess/shared)
+CUDA thread blocks have much faster access to their local, shared memory (compared to the device's global memory). This folder contains two codes that show how to allocate data into these caches and how to access them.
+- [simple](./memaccess/shared/simple): this shows a few different ways on how shared memory can be employed and compares their bandwidth.
+- [transposemat](./memaccess/shared/transposemat): an application of the previous concepts where matrix tranposition achieves almost-ideal bandwidth.
+
 ### [mixed](./memaccess/mixed)
+Of course that, in a reallistic scenario, one will need to deal with data living and being transferred from and two both shared and global memory. The modern CUDA versions indeed do a very good job on managing this process efficiently. However, to obtain the most of performance, some tuning can be very useful. 
+
+This folder contains an application that implements numerical derivatives using the Finite Difference method on a cubic grid. It is demonstrated that performance can be affected by the way the tiling decomposition (using stencils) is performed.
